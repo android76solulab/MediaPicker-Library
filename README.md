@@ -1,6 +1,17 @@
 # MediaPicker-Library
 Media picker with image and video together.
 
+
+```groovy
+repositories {
+        maven { url "https://jitpack.io" }  
+    }
+```
+
+```groovy
+    implementation 'com.github.android76solulab:MediaPicker-Library:1.0.1'
+```
+
 ## Open Activity
 ```kotlin
 private val PER_CODE = 5001
