@@ -9,7 +9,7 @@ repositories {
 ```
 
 ```groovy
-    implementation 'com.github.android76solulab:MediaPicker-Library:1.0.2'
+    implementation 'com.github.android76solulab:MediaPicker-Library:1.0.3'
 ```
 
 ## Open Activity
