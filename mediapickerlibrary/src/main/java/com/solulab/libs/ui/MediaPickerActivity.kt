@@ -20,12 +20,12 @@ import android.widget.Toast
 import com.solulab.libs.R
 import com.solulab.libs.adapters.MediaAdapter
 import com.solulab.libs.adapters.SpinnerCustomAdapter
+import com.solulab.libs.helper.PickerMode
 import com.solulab.libs.model.MediaModel
 import kotlinx.android.synthetic.main.activity_media_picker.*
 import java.io.File
 import java.util.*
 import kotlin.collections.ArrayList
-
 
 
 class MediaPickerActivity : AppCompatActivity() {
@@ -34,29 +34,34 @@ class MediaPickerActivity : AppCompatActivity() {
     private var imagesSelected = ArrayList<String>()
     private var mAdapter: MediaAdapter? = null
 
-    private val imageFolderProjection = arrayOf(MediaStore.Images.Media.BUCKET_DISPLAY_NAME, MediaStore.Images.Media.DATA)
+    private val imageFolderProjection =
+        arrayOf(MediaStore.Images.Media.BUCKET_DISPLAY_NAME, MediaStore.Images.Media.DATA)
     private val imageDetailsProjection = arrayOf(MediaStore.Images.Media.DISPLAY_NAME, MediaStore.Images.Media.DATA)
 
     private val videoFolderProjection = arrayOf(MediaStore.Video.Media.BUCKET_DISPLAY_NAME, MediaStore.Video.Media.DATA)
-    private val videoDetailsProjection = arrayOf(MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.DATA, MediaStore.Video.Media.DURATION)
+    private val videoDetailsProjection =
+        arrayOf(MediaStore.Video.Media.DISPLAY_NAME, MediaStore.Video.Media.DATA, MediaStore.Video.Media.DURATION)
 
     private var bucketNames: MutableList<String> = ArrayList()
 
     private var spinnerAdapter: SpinnerCustomAdapter? = null
 
     private var LIMIT = 0
+    var pickerMode: PickerMode = PickerMode();
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_media_picker)
         setSupportActionBar(toolbar)
+
         setResult(Activity.RESULT_CANCELED)
 
         LIMIT = intent.getIntExtra("limit", 0)
+        pickerMode.mCurrentPicker = intent.getIntExtra(PickerMode.TYPE_INTENT, PickerMode.IMAGE_)
 
         if (LIMIT == 0) {
             finishAll()
-            Toast.makeText(this,"Limit is zero!",Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Limit is zero!", Toast.LENGTH_LONG).show()
             return
         }
         val actionBar = supportActionBar
@@ -67,8 +72,14 @@ class MediaPickerActivity : AppCompatActivity() {
         imagesSelected.clear()
         mediaList.clear()
         bucketNames.clear()
-        bucketNames.add(getString(R.string.all_media_spiner))
-        getPicBuckets()
+        bucketNames.add(getString(R.string.all_media_spiner))//Todo Need to set limit from previous activity.
+
+        //For All media list
+        when {
+            pickerMode.mCurrentPicker == PickerMode.IMAGE_ -> getPicBuckets()
+            pickerMode.mCurrentPicker == PickerMode.VIDEO_ -> getVideoBuckets()
+            pickerMode.mCurrentPicker == PickerMode.IMAGE_VIDEO_ -> getPicBuckets()
+        }
 
         spinnerAdapter = SpinnerCustomAdapter(
             this,
@@ -86,9 +97,14 @@ class MediaPickerActivity : AppCompatActivity() {
                     val allMedia = AllMediaFetch(bucketNames, this@MediaPickerActivity)
                     allMedia.execute()
                 } else {
-                    getPictures(bucketNames[position])
-                    //#TODO Video In next Phase
-                    getVideos(bucketNames[position])
+                    if(pickerMode.mCurrentPicker == PickerMode.IMAGE_){
+                        getPictures(bucketNames[position])
+                    }else if (pickerMode.mCurrentPicker == PickerMode.VIDEO_){
+                        getVideos(bucketNames[position])
+                    }else if (pickerMode.mCurrentPicker == PickerMode.IMAGE_VIDEO_){
+                        getPictures(bucketNames[position])
+                        getVideos(bucketNames[position])
+                    }
                 }
                 mAdapter!!.notifyDataSetChanged()
             }
@@ -162,12 +178,21 @@ class MediaPickerActivity : AppCompatActivity() {
         finishAll()
     }
 
-    private class AllMediaFetch(private val bucketNames: MutableList<String>,private val mediaPickerActivity: MediaPickerActivity) : AsyncTask<Void, Void, String>() {
+    private class AllMediaFetch(
+        private val bucketNames: MutableList<String>,
+        private val mediaPickerActivity: MediaPickerActivity
+    ) : AsyncTask<Void, Void, String>() {
 
         override fun doInBackground(vararg params: Void?): String? {
             for (i in 1 until bucketNames.size) {
-                mediaPickerActivity.getPictures(bucketNames[i])
-                mediaPickerActivity.getVideos(bucketNames[i])
+                when {
+                    mediaPickerActivity.pickerMode.mCurrentPicker == PickerMode.IMAGE_ -> mediaPickerActivity.getPictures(bucketNames[i])
+                    mediaPickerActivity.pickerMode.mCurrentPicker == PickerMode.VIDEO_ -> mediaPickerActivity.getVideos(bucketNames[i])
+                    mediaPickerActivity.pickerMode.mCurrentPicker == PickerMode.IMAGE_VIDEO_ -> {
+                        mediaPickerActivity.getPictures(bucketNames[i])
+                        mediaPickerActivity.getVideos(bucketNames[i])
+                    }
+                }
             }
             return ""
         }
@@ -269,7 +294,10 @@ class MediaPickerActivity : AppCompatActivity() {
         } finally {
             cursor!!.close()
         }
-        getVideoBuckets()
+
+        if (pickerMode.mCurrentPicker == PickerMode.IMAGE_VIDEO_){
+            getVideoBuckets()
+        }
     }
 
     private fun getPictures(bucket: String) {
@@ -352,10 +380,11 @@ class MediaPickerActivity : AppCompatActivity() {
         try {
             val whereArgs = arrayOf(bucket)
             val orderBy = MediaStore.Video.Media.DATE_MODIFIED
-            val where = (MediaStore.Video.Media.BUCKET_DISPLAY_NAME + " =?" )
+            val where = (MediaStore.Video.Media.BUCKET_DISPLAY_NAME + " =?")
 
             cursor = contentResolver
-                .query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                .query(
+                    MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
                     videoDetailsProjection,
                     where,
                     whereArgs,
@@ -372,7 +401,7 @@ class MediaPickerActivity : AppCompatActivity() {
                     val duration = cursor.getString(cursor.getColumnIndex(videoDetailsProjection[2]))
 
                     file = File(path)
-                    Log.d("file.extension=",""+file.extension)
+                    Log.d("file.extension=", "" + file.extension)
                     if (file.exists() && !albumSet.contains(path)) {
                         val mode = MediaModel()
                         mode.mediaPath = path

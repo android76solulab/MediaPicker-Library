@@ -19,6 +19,7 @@ private val REQ_CODE = 123
                 
 val intent = Intent(this, MediaPickerActivity::class.java)
 intent.putExtra("limit",10)
+intent.putExtra(PickerMode.TYPE_INTENT,PickerMode.IMAGE_VIDEO_)
 startActivityForResult(intent, REQ_CODE)
 ```
 

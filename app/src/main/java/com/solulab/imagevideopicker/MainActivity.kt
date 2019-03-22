@@ -13,6 +13,7 @@ import android.support.v4.content.ContextCompat
 import android.support.v4.view.ViewCompat
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import com.solulab.libs.helper.PickerMode
 import com.solulab.libs.ui.MediaPickerActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import java.io.File
@@ -33,6 +34,7 @@ class MainActivity : AppCompatActivity() {
             if (!permissionIfNeeded()) {
                 val intent = Intent(this, MediaPickerActivity::class.java)
                 intent.putExtra("limit",10)
+                intent.putExtra(PickerMode.TYPE_INTENT,PickerMode.IMAGE_VIDEO_)
                 startActivityForResult(intent, REQ_CODE)
             }
         }
